@@ -175,7 +175,37 @@ router.post(
         return res.status(400).json({ message: result.message });
       }
 
-      // 5) Return success
+      // 5) Emit socket events to notify frontend
+      const io = req.io;
+      if (io) {
+        // Notify sender
+        io.to(sender._id.toString()).emit("payment:completed", {
+          type: "sent",
+          amount,
+          otherParty: receiver.username,
+          balance: result.newBalance,
+          requestId: requestId || null,
+        });
+
+        // Notify receiver (this triggers the QR code page to show success)
+        io.to(receiver._id.toString()).emit("payment:completed", {
+          type: "received",
+          amount,
+          otherParty: sender.username,
+          balance: result.receiverBalance,
+          requestId: requestId || null,
+        });
+
+        // Also emit balance updates
+        io.to(sender._id.toString()).emit("balance:updated", {
+          balance: result.newBalance,
+        });
+        io.to(receiver._id.toString()).emit("balance:updated", {
+          balance: result.receiverBalance,
+        });
+      }
+
+      // 6) Return success
       return res.json({
         message: "Transaction successful",
         newBalance: result.newBalance,
