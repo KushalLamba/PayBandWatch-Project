@@ -1,0 +1,1 @@
+This file is safe to delete after confirming npm-only install works. Created to remind removal of pnpm-lock.yaml if issues persist.
