@@ -7,7 +7,13 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": ["payband", "wallet", "payment", "qrcode", "esp32"],
+  "keywords": [
+    "payband",
+    "wallet",
+    "payment",
+    "qrcode",
+    "esp32"
+  ],
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -15,7 +21,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^7.5.0",
+    "mongoose": "7.4.1",
     "qrcode": "^1.5.3",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.0"
