@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Wallet, QrCode, Shield, Clock } from "lucide-react"
+import { HeroButtons, CTAButton, CardButton } from "@/components/hero-buttons"
 
 export default function Home(): ReactElement {
   return (
@@ -17,14 +18,7 @@ export default function Home(): ReactElement {
                 The seamless digital wallet platform with wearable technology integration. Send and receive money with
                 just a scan and a touch.
               </p>
-              <div className="flex flex-wrap gap-4">
-                <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-gray-100">
-                  <Link href="/register">Get Started</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-white text-black hover:bg-white/10">
-                  <Link href="/login">Login</Link>
-                </Button>
-              </div>
+              <HeroButtons />
             </div>
             <div className="md:w-1/2 flex justify-center">
               <div className="relative w-64 h-64">
@@ -83,9 +77,7 @@ export default function Home(): ReactElement {
                 <p>4. Receive real-time notifications for all transactions</p>
               </CardContent>
               <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="/register">Create Account</Link>
-                </Button>
+                <CardButton />
               </CardFooter>
             </Card>
 
@@ -120,11 +112,7 @@ export default function Home(): ReactElement {
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Join PayBand today and transform how you send and receive money with our innovative wearable technology.
           </p>
-          <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-gray-100">
-            <Link href="/register" className="flex items-center gap-2">
-              Get Started <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          <CTAButton />
         </div>
       </section>
 
@@ -134,7 +122,7 @@ export default function Home(): ReactElement {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <h3 className="text-xl font-bold text-white">PayBand</h3>
-              <p>© 2023 PayBand. All rights reserved.</p>
+              <p>© 2025 PayBand. All rights reserved.</p>
             </div>
             <div className="flex gap-6">
               <Link href="#" className="hover:text-white">

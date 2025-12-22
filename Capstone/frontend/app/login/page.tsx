@@ -108,11 +108,11 @@ export default function Login() {
                 onChange={handleChange}
                 required
               />
-              <div className="text-right">
+              {/* <div className="text-right">
                 <Link href="/forgot-password" className="text-sm text-emerald-600 hover:underline">
                   Forgot password?
                 </Link>
-              </div>
+              </div> */}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
