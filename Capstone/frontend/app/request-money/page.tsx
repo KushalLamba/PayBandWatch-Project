@@ -29,6 +29,19 @@ export default function RequestMoney() {
   const [isPolling, setIsPolling] = useState(false)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Use refs to track current state values to avoid stale closures
+  const paymentStatusRef = useRef(paymentStatus)
+  const requestIdRef = useRef(requestId)
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    paymentStatusRef.current = paymentStatus
+  }, [paymentStatus])
+  
+  useEffect(() => {
+    requestIdRef.current = requestId
+  }, [requestId])
 
   const { user, refreshUser, loading } = useAuth()
   const socket = useSocket()
@@ -48,21 +61,38 @@ export default function RequestMoney() {
   // Socket.io listener for balance updates
   useEffect(() => {
     if (socket && user && isPolling) {
-      socket.on("balance:updated", async (data) => {
+      const handleBalanceUpdated = async (data: any) => {
         console.log("Balance updated event received:", data)
         await refreshUser()
-        checkPaymentReceived()
-      })
+        // Only check if still pending
+        if (paymentStatusRef.current === "pending") {
+          checkPaymentReceived()
+        }
+      }
 
-      socket.on("payment:completed", async (data) => {
+      const handlePaymentCompleted = async (data: any) => {
         console.log("Payment completed event received:", data)
-        await refreshUser()
-        checkPaymentReceived()
-      })
+        // Check if this payment is for our current request
+        const currentRequestId = requestIdRef.current
+        if (data.requestId && currentRequestId && data.requestId === currentRequestId) {
+          console.log("Payment completed for our request, triggering success")
+          // Directly trigger success since we received confirmation via socket
+          handlePaymentSuccess()
+          return
+        }
+        // If no requestId match but type is received, check via API
+        if (data.type === "received" && paymentStatusRef.current === "pending") {
+          await refreshUser()
+          checkPaymentReceived()
+        }
+      }
+
+      socket.on("balance:updated", handleBalanceUpdated)
+      socket.on("payment:completed", handlePaymentCompleted)
 
       return () => {
-        socket.off("balance:updated")
-        socket.off("payment:completed")
+        socket.off("balance:updated", handleBalanceUpdated)
+        socket.off("payment:completed", handlePaymentCompleted)
       }
     }
   }, [socket, user, isPolling, refreshUser])
@@ -127,9 +157,13 @@ export default function RequestMoney() {
   }
 
   const checkPaymentReceived = async () => {
-    if (!user || !requestId || paymentStatus !== "pending") return
+    // Use refs to get current values and avoid stale closure issues
+    const currentStatus = paymentStatusRef.current
+    const currentRequestId = requestIdRef.current
+    
+    if (!user || !currentRequestId || currentStatus !== "pending") return
     try {
-      const resp = await api.get(`/api/payments/request/status/${requestId}`)
+      const resp = await api.get(`/api/payments/request/status/${currentRequestId}`)
       const status = resp.data.status
       if (status === "completed") {
         handlePaymentSuccess()
@@ -145,14 +179,25 @@ export default function RequestMoney() {
   }
 
   const handlePaymentSuccess = () => {
+    // Prevent multiple calls - check if already handled
+    if (paymentStatusRef.current !== "pending") {
+      console.log("Payment already handled, skipping success handler")
+      return
+    }
+    
+    // Update ref immediately to prevent race conditions
+    paymentStatusRef.current = "success"
+    
     setPaymentStatus("success")
     setIsPolling(false)
 
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
     }
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
     }
 
     toast({
@@ -164,11 +209,24 @@ export default function RequestMoney() {
   }
 
   const handlePaymentTimeout = () => {
+    // Prevent calling timeout if already succeeded
+    if (paymentStatusRef.current === "success") {
+      console.log("Payment already succeeded, ignoring timeout")
+      return
+    }
+    
+    // Update ref immediately to prevent race conditions
+    paymentStatusRef.current = "failed"
     setPaymentStatus("failed")
     setIsPolling(false)
 
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
     }
 
     toast({
@@ -200,7 +258,9 @@ export default function RequestMoney() {
 
       setQrData(response.data)
       setRequestId(response.data.requestId)
+      requestIdRef.current = response.data.requestId
       setPaymentStatus("pending")
+      paymentStatusRef.current = "pending"
       const now = Date.now()
       setStartTime(now)
       setTimeRemaining(120) // Reset timer to 2 minutes
@@ -246,15 +306,19 @@ export default function RequestMoney() {
   const handleReset = () => {
     setQrData(null)
     setPaymentStatus("idle")
+    paymentStatusRef.current = "idle"
     setIsPolling(false)
     setStartTime(null)
     setRequestId(null)
+    requestIdRef.current = null
 
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
     }
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
     }
     clearPersisted()
   }
@@ -282,9 +346,11 @@ export default function RequestMoney() {
       setAmount(parsed.amount.toString())
       setQrData(parsed.qrData)
       setPaymentStatus("pending")
+      paymentStatusRef.current = "pending"
       setStartTime(parsed.startTime)
       setInitialBalance(parsed.initialBalance)
       setRequestId(parsed.requestId || null)
+      requestIdRef.current = parsed.requestId || null
       setTimeRemaining(Math.max(0, 120 - Math.floor(elapsed / 1000)))
       startPollingForPayment({ restore: true })
     } catch {}
